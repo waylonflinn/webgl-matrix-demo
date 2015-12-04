@@ -14,7 +14,7 @@ the gpu code. this allows us to read floats directly by calling readPixels
 then simply switching the buffer from Uint8Array to a Float32Array.
 this has been done before, but my code doesn't need ifs or loops. (except
 for the zero check)
-2. for gpus such as the Samsung Chromebook, which do not have oes_texture_float_extension, 
+2. for gpus such as the Samsung Chromebook, which do not have oes_texture_float_extension,
 we can pass float data as a RGBA BYTE texture. In this case we need to either pass two
 textures, or double up the size of the passed texture. We also implement code
 to munge the bytes back into floats on the gpu.
@@ -41,10 +41,10 @@ gpu_matrix.prototype = {
 	// multiply this into a passed matrix
 	multiply: function(matrix) {
 		// check conditions
-		if (this.c != matrix.c || this.data===undefined || matrix.data===undefined) {
+		if (this.c != matrix.r || this.data===undefined || matrix.data===undefined) {
 			throw "error: non-matching matrix or missing data";
 		}
-		
+
 		// run the web gl stuff
 		return this._multiply(this,matrix);
 	},
@@ -67,7 +67,7 @@ gpu_matrix.prototype = {
 	setData: function(r,c,data) {
 		// verify that data if supplied matches r*c
 		if(!(data instanceof Array || data.subarray) ||
-			(r===undefined || c===undefined) || 
+			(r===undefined || c===undefined) ||
 			(data!==undefined && r*c != data.length)) {
 			throw "bad data."
 			return null;
@@ -77,7 +77,7 @@ gpu_matrix.prototype = {
 		this.data = data;
 		return this;
 	},
-	
+
 	// get data from the matrix as an object
 	getData: function() {
 		if (this.data!==undefined) {
@@ -112,10 +112,10 @@ gpu_matrix.prototype = {
 		}
 		// set viewport to rows, columns
 		console.log("this.__gpumatrix__ " + this.__gpumatrix__);
-		gpu_matrix.prototype.__gpumatrix__.viewport(0, 0, c, r);
+		gpu_matrix.prototype.__gpumatrix__.viewport(0, 0, c, r); //
 		return this.__gpumatrix__;
 	},
-	
+
 	_texelsFromMatrices: function(m1,m2,r,c) {
 		// dimensions
 		var r1 = m1.r, c1=m1.c, r2=m2.r, c2=m2.c;
@@ -150,13 +150,13 @@ gpu_matrix.prototype = {
 		}
 		return texels;
 	},
-	
+
 	// SUPPORTS FLOAT MATRIX -> RGBA BYTE
 	// ### DOES NOT SUPPORT NON-SQUARE MATRICES
 	_texelsFromMatrix: function(m,r,c) {
 		// dimensions
 		var texelcount = m.r*m.c;
-		buffer = new ArrayBuffer(4*texelcount);
+		buffer = new ArrayBuffer(Float32Array.BYTES_PER_ELEMENT*texelcount);
 		// get texel data (rgba) as a Float32Array
 		texels = new Float32Array(buffer);
 		// copy data to Float32Array, ...
@@ -167,7 +167,7 @@ gpu_matrix.prototype = {
 		// ..., then return as IEEE754 bytes
 		return new Uint8Array(buffer);
 	},
-	
+
 	// bind TEXTURE0 with m1 in .r and m2 in .g (FLOAT RGB texture)
 	_bindDualSrcTexture: function(gl,renderer,m1,m2) {
 		// get float array data for texture to multiply
@@ -188,7 +188,7 @@ gpu_matrix.prototype = {
 		gl.uniform1i(sampler,0);
 		return texture;
 	},
-	
+
 	// bind passed textureUNIT to passed matrix
 	_bindSingleSrcTexture: function(gl,renderer,m,textureUNIT,sampler) {
 		// get float array data for texture to multiply
@@ -210,17 +210,17 @@ gpu_matrix.prototype = {
 		gl.uniform1i(sampler,textureUNIT-gl.TEXTURE0);
 		return texture;
 	},
-	
+
 	// get the canvas to render to
 	_createRenderCanvas: function(gl,m1,m2) {
 		// Safari readPixels will not work from an 'off-screen' canvas
-		// This code probably needs re-factoring, since the canvas should be the 
+		// This code probably needs re-factoring, since the canvas should be the
 		// first thing we grab, then the webgl context
 		var rendercanvas = document.getElementById("matrixglcanvas");
 		return rendercanvas;
 	},
 
-	// bind destination texture	
+	// bind destination texture
 	_createDstTexture: function(gl,rendercanvas) {
 		// create and bind texture to render to
 		var dstTex = gl.createTexture();
@@ -229,7 +229,7 @@ gpu_matrix.prototype = {
 		gl.texImage2D(gl.TEXTURE_2D,/*level*/0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,rendercanvas);
 		return dstTex;
 	},
-	
+
 	// bind a framebuffer, renderbuffer, texture
 	_bindFramebuffer: function(gl,dstTex,m1,m2) {
 		// create and bind renderbuffer
@@ -275,7 +275,7 @@ gpu_matrix.prototype = {
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 		gl.vertexAttribPointer(aPos, /*item size*/3, gl.FLOAT, false, 0, 0);
 		gl.enableVertexAttribArray(aPos);
-		
+
 		// bind texture cords
 		var aTex = gl.getAttribLocation(renderer,"aTex");
 		var texCoords = gl.createBuffer();
@@ -284,7 +284,7 @@ gpu_matrix.prototype = {
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
 		gl.vertexAttribPointer(aTex, /*item size*/2, gl.FLOAT, false, 0, 0);
 		gl.enableVertexAttribArray(aTex);
-		
+
 		// index to vertices
 		var indices = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indices);
@@ -318,7 +318,7 @@ gpu_matrix.prototype = {
 	// multiply m1 x m2
 	_multiply: function(m1,m2) {
 		// get the basics up and running
-		var rawbuffer = new ArrayBuffer(m2.c*m1.r*4);
+		var rawbuffer = new ArrayBuffer(m1.r*m2.c*Float32Array.BYTES_PER_ELEMENT);
 		var gl = this._checkinit(m1.r,m2.c);
 		var renderer = this._buildRenderer(gl);
 		if (this.supportsOES_TEXTURE_FLOAT_EXTENSION) {
@@ -329,7 +329,7 @@ gpu_matrix.prototype = {
 		}
 		this._bindUniforms(gl,renderer,m1,m2);
 		this._bindVertices(gl,renderer,m1,m2);
-		
+
 		// Not sure why I had this in
 //		gl.enable(gl.DEPTH_TEST);
 //		gl.depthFunc(gl.LEQUAL);
@@ -338,7 +338,7 @@ gpu_matrix.prototype = {
 
 //		Following code was enabled, is it needed?
 //
-//		Apparently not. Probably just some testing code to make sure the calls were valid. 
+//		Apparently not. Probably just some testing code to make sure the calls were valid.
 //		Interestingly, leaving this code in, completely locks up Firefox 28.0, but other
 // 		older versions are just fine. NOTE: It locks up on the second press of 'Test'
 //		Leaving it in, just in case someone wants to try and understand why FF 28.0 has an issue.
@@ -390,7 +390,7 @@ gpu_matrix.prototype = {
 		return shader;
 	},
 
-	_vertexShader : 
+	_vertexShader :
 "   // vertex shader for a single quad \n"+
 "    // work is performed based on the texels being passed \n"+
 "    // through to the texture shader. \n"+
@@ -415,164 +415,164 @@ gpu_matrix.prototype = {
 "    // output RGBA canvas. \n" +
 "    // readPixel is used to read the bytes. \n" +
 "#ifdef GL_ES \n" +
-"	precision highp float; \n" + 
-"#endif \n" + 
-"\n" + 
-"	varying vec2	  vTex;         // row, column to calculate \n" + 
-"	uniform sampler2D usampler;		// left in .r, right in .g \n" + 
-"	uniform int		  uLength;      // r1xc1.r2xc2 => product has r2 (or c1) terms \n" + 
-"	uniform float	  uStepS;       // increment across source texture \n" + 
-"	uniform float	  uStepT;       // increment down source texture \n" + 
-"	uniform float	  uOutRows;     // size of output in rows \n" + 
-"	uniform float	  uOutCols;     // size of output in columns \n" + 
-"	 \n" + 
-"	// sum row r x col c \n" + 
-"	float sumrowcol(float row, float col) { \n" + 
-"		float sum = 0.;             // sum \n" + 
-"		float ss = 0.;              // column on source texture \n" + 
-"		float tt = 0.;              // row on source texture \n" + 
-"		float r = row*uStepT;       // moving texture coordinate \n" + 
-"		float c = col*uStepS;       // moving texture coordinate \n" + 
-"		for (int pos=0 ; pos<2048 ; ++pos) { \n" + 
-"			if(pos>=uLength) break; // stop when we multiple a row by a column \n" + 
-"			float m1 = texture2D(usampler,vec2(ss,r)).r; \n" + 
-"			float m2 = texture2D(usampler,vec2(c,tt)).g; \n" + 
-"			sum += (m1*m2); \n" + 
-"			ss += uStepS; \n" + 
-"			tt += uStepT; \n" + 
-"		} \n" + 
-"		return sum; \n" + 
-"	} \n" + 
-"	 \n" + 
-"	void main(void) { \n" + 
-"		 \n" + 
-"		// get the implied row and column from .s and .t of passed texel \n" + 
-"		float col = floor((vTex.s*uOutRows)); \n" + 
-"		float row = floor((vTex.t*uOutCols));    \n" + 
-"\n" + 
-"		// sum row x col for the passed pixel \n" + 
-"		float v = sumrowcol(row,col); \n" + 
-"\n" + 
-"		// Render to IEEE 754 Floating Point \n" + 
-"		if (v==0.) { \n" + 
-"			gl_FragColor = vec4(0.,0.,0.,0.); \n" + 
-"			return; \n" + 
-"		} \n" + 
-"		float a = abs(v);                           // encode absolute value + sign \n" + 
-"		float exp = floor(log2(a));                 // number of powers of 2 \n" + 
-"		float mant = (a * pow(2.,23.-exp));         // multiply to fill 24 bits (implied leading 1) \n" + 
-"		float mant1 = floor(mant / 256. / 256.);    // first 8 bits of mantissa \n" + 
-"		float mant2 = mod(floor(mant / 256.),256.); // second 8 bits \n" + 
-"		float mant3 = mod(mant,256.);               // third 8 bits \n" + 
-"		 \n" + 
-"		highp float sign = 128.-128.*(a/v);			// sign bit is 256 or 0 \n" + 
-"		highp float e = (sign+exp+127.)/510.;		// exponent and sign \n" + 
-"		highp float m1 = (mant1-(128.*(1.-mod(exp+127.,2.))))/255.; // handle leading bit \n" + 
-"		highp float m2 = (mant2)/255.;				// middle part \n" + 
-"		highp float m3 = (mant3+.5)/255.;			// scale to 0 - 255 \n" + 
-"		gl_FragColor = vec4(m3,m2,m1,e);			// output an IEEE754 32-bit floating point number \n" + 
+"	precision highp float; \n" +
+"#endif \n" +
+"\n" +
+"	varying vec2	  vTex;         // row, column to calculate \n" +
+"	uniform sampler2D usampler;		// left in .r, right in .g \n" +
+"	uniform int		  uLength;      // r1xc1.r2xc2 => product has r2 (or c1) terms \n" +
+"	uniform float	  uStepS;       // increment across source texture \n" +
+"	uniform float	  uStepT;       // increment down source texture \n" +
+"	uniform float	  uOutRows;     // size of output in rows \n" +
+"	uniform float	  uOutCols;     // size of output in columns \n" +
+"	 \n" +
+"	// sum row r x col c \n" +
+"	float sumrowcol(float row, float col) { \n" +
+"		float sum = 0.;             // sum \n" +
+"		float ss = 0.;              // column on source texture \n" +
+"		float tt = 0.;              // row on source texture \n" +
+"		float r = row*uStepT;       // moving texture coordinate \n" +
+"		float c = col*uStepS;       // moving texture coordinate \n" +
+"		for (int pos=0 ; pos<2048 ; ++pos) { \n" +
+"			if(pos>=uLength) break; // stop when we multiple a row by a column \n" +
+"			float m1 = texture2D(usampler,vec2(ss,r)).r; \n" +
+"			float m2 = texture2D(usampler,vec2(c,tt)).g; \n" +
+"			sum += (m1*m2); \n" +
+"			ss += uStepS; \n" +
+"			tt += uStepT; \n" +
+"		} \n" +
+"		return sum; \n" +
+"	} \n" +
+"	 \n" +
+"	void main(void) { \n" +
+"		 \n" +
+"		// get the implied row and column from .s and .t of passed texel \n" +
+"		float col = floor((vTex.s*uOutRows)); \n" +
+"		float row = floor((vTex.t*uOutCols));    \n" +
+"\n" +
+"		// sum row x col for the passed pixel \n" +
+"		float v = sumrowcol(row,col); \n" +
+"\n" +
+"		// Render to IEEE 754 Floating Point \n" +
+"		if (v==0.) { \n" +
+"			gl_FragColor = vec4(0.,0.,0.,0.); \n" +
+"			return; \n" +
+"		} \n" +
+"		float a = abs(v);                           // encode absolute value + sign \n" +
+"		float exp = floor(log2(a));                 // number of powers of 2 \n" +
+"		float mant = (a * pow(2.,23.-exp));         // multiply to fill 24 bits (implied leading 1) \n" +
+"		float mant1 = floor(mant / 256. / 256.);    // first 8 bits of mantissa \n" +
+"		float mant2 = mod(floor(mant / 256.),256.); // second 8 bits \n" +
+"		float mant3 = mod(mant,256.);               // third 8 bits \n" +
+"		 \n" +
+"		highp float sign = 128.-128.*(a/v);			// sign bit is 256 or 0 \n" +
+"		highp float e = (sign+exp+127.)/510.;		// exponent and sign \n" +
+"		highp float m1 = (mant1-(128.*(1.-mod(exp+127.,2.))))/255.; // handle leading bit \n" +
+"		highp float m2 = (mant2)/255.;				// middle part \n" +
+"		highp float m3 = (mant3+.5)/255.;			// scale to 0 - 255 \n" +
+"		gl_FragColor = vec4(m3,m2,m1,e);			// output an IEEE754 32-bit floating point number \n" +
 "	} ",
- 
+
 	_shader_RGBA :
-"	// EXPERIMENTAL: READ FLOAT DATA FROM RGBA BYTES IN IEEE754 \n" + 
-"    // fragment shader that calculates the sum of the passed row and \n" + 
-"    // column (texture coord). \n" + 
-"    // we loop over the row and column and sum the product. \n" + 
-"    // product is then rendered to 32-bit IEEE754 floating point in the \n" + 
-"    // output RGBA canvas. \n" + 
-"    // readPixel is used to read the bytes. \n" + 
-"#ifdef GL_ES \n" + 
-"	precision highp float; \n" + 
-"#endif \n" + 
-"\n" + 
-"	varying vec2	  vTex;         // row, column to calculate \n" + 
-"	uniform sampler2D usampler1;	// LEFT \n" + 
-"	uniform sampler2D usampler2;	// RIGHT \n" + 
-"	uniform int		  uLength;      // r1xc1.r2xc2 => product has r2 (or c1) terms \n" + 
-"	uniform float	  uStepS;       // increment across source texture \n" + 
-"	uniform float	  uStepT;       // increment down source texture \n" + 
-"	uniform float	  uOutRows;     // size of output in rows \n" + 
-"	uniform float	  uOutCols;     // size of output in columns \n" + 
-"\n" + 
-"	/* \n" + 
-"	// javascript decrypt ieee754 2013/02/08 \n" + 
-"	mant3 = prod[src+0]; \n" + 
-"	mant2 = prod[src+1]; \n" + 
-"	bit = Math.floor(prod[src+2]/128.)*128; \n" + 
-"	mant1 = prod[src+2]-(bit-128.); \n" + 
-"	exp = ((prod[src+3] % 128)*2) + bit/128.; \n" + 
-"	sgn = Math.floor(prod[src+3]/128.); \n" + 
-"	f = mant1*256*256 + mant2*256 + mant3; \n" + 
-"	f = f * Math.pow(2,(exp-150))*(1-2*sgn); \n" + 
-"	*/ \n" + 
-"\n" + 
-"	float toIEEE754(vec4 bytes) { \n" + 
-"		// RETURN AN IEEE754 FLOAT FROM 4 BYTES \n" + 
-"		// GET BYTES \n" + 
-"		float byte0 = bytes.r*255.; \n" + 
-"		float byte1 = bytes.g*255.; \n" + 
-"		float byte2 = bytes.b*255.; \n" + 
-"		float byte3 = bytes.a*255.; \n" + 
-"		// COMPUTE \n" + 
-"		float mant3 = byte0; \n" + 
-"		float mant2 = byte1; \n" + 
-"		float bitv = floor(byte2/128.)*128.; \n" + 
-"		float mant1 = byte2-(bitv-128.); \n" + 
-"		float expv = (mod(byte3,128.))*2. + bitv/128.; \n" + 
-"		float sgnv = floor(byte3/128.); \n" + 
-"		float f = (mant1*256.*256.) + (mant2*256.) + mant3; \n" + 
-"		f = f * pow(2.,(expv-150.))*(1.-2.*sgnv); \n" + 
-"		return f; \n" + 
-"	} \n" + 
-"\n" + 
-"	// sum row r x col c \n" + 
-"	float sumrowcol(float row, float col) { \n" + 
-"		float sum = 0.;             // sum \n" + 
-"		float ss = 0.;              // column on source texture \n" + 
-"		float tt = 0.;              // row on source texture \n" + 
-"		float r = row*uStepT;       // moving texture coordinate \n" + 
-"		float c = col*uStepS;       // moving texture coordinate \n" + 
-"		for (int pos=0 ; pos<2048 ; ++pos) { \n" + 
-"			if(pos>=uLength) break; // stop when we multiple a row by a column \n" + 
-"			float m1 = toIEEE754(texture2D(usampler1,vec2(ss,r))); \n" + 
-"			float m2 = toIEEE754(texture2D(usampler2,vec2(c,tt))); \n" + 
+"	// EXPERIMENTAL: READ FLOAT DATA FROM RGBA BYTES IN IEEE754 \n" +
+"    // fragment shader that calculates the sum of the passed row and \n" +
+"    // column (texture coord). \n" +
+"    // we loop over the row and column and sum the product. \n" +
+"    // product is then rendered to 32-bit IEEE754 floating point in the \n" +
+"    // output RGBA canvas. \n" +
+"    // readPixel is used to read the bytes. \n" +
+"#ifdef GL_ES \n" +
+"	precision highp float; \n" +
+"#endif \n" +
+"\n" +
+"	varying vec2	  vTex;         // row, column to calculate \n" +
+"	uniform sampler2D usampler1;	// LEFT \n" +
+"	uniform sampler2D usampler2;	// RIGHT \n" +
+"	uniform int		  uLength;      // r1xc1.r2xc2 => product has r2 (or c1) terms \n" +
+"	uniform float	  uStepS;       // increment across source texture \n" +
+"	uniform float	  uStepT;       // increment down source texture \n" +
+"	uniform float	  uOutRows;     // size of output in rows \n" +
+"	uniform float	  uOutCols;     // size of output in columns \n" +
+"\n" +
+"	/* \n" +
+"	// javascript decrypt ieee754 2013/02/08 \n" +
+"	mant3 = prod[src+0]; \n" +
+"	mant2 = prod[src+1]; \n" +
+"	bit = Math.floor(prod[src+2]/128.)*128; \n" +
+"	mant1 = prod[src+2]-(bit-128.); \n" +
+"	exp = ((prod[src+3] % 128)*2) + bit/128.; \n" +
+"	sgn = Math.floor(prod[src+3]/128.); \n" +
+"	f = mant1*256*256 + mant2*256 + mant3; \n" +
+"	f = f * Math.pow(2,(exp-150))*(1-2*sgn); \n" +
+"	*/ \n" +
+"\n" +
+"	float toIEEE754(vec4 bytes) { \n" +
+"		// RETURN AN IEEE754 FLOAT FROM 4 BYTES \n" +
+"		// GET BYTES \n" +
+"		float byte0 = bytes.r*255.; \n" +
+"		float byte1 = bytes.g*255.; \n" +
+"		float byte2 = bytes.b*255.; \n" +
+"		float byte3 = bytes.a*255.; \n" +
+"		// COMPUTE \n" +
+"		float mant3 = byte0; \n" +
+"		float mant2 = byte1; \n" +
+"		float bitv = floor(byte2/128.)*128.; \n" +
+"		float mant1 = byte2-(bitv-128.); \n" +
+"		float expv = (mod(byte3,128.))*2. + bitv/128.; \n" +
+"		float sgnv = floor(byte3/128.); \n" +
+"		float f = (mant1*256.*256.) + (mant2*256.) + mant3; \n" +
+"		f = f * pow(2.,(expv-150.))*(1.-2.*sgnv); \n" +
+"		return f; \n" +
+"	} \n" +
+"\n" +
+"	// sum row r x col c \n" +
+"	float sumrowcol(float row, float col) { \n" +
+"		float sum = 0.;             // sum \n" +
+"		float ss = 0.;              // column on source texture \n" +
+"		float tt = 0.;              // row on source texture \n" +
+"		float r = row*uStepT;       // moving texture coordinate \n" +
+"		float c = col*uStepS;       // moving texture coordinate \n" +
+"		for (int pos=0 ; pos<2048 ; ++pos) { \n" +
+"			if(pos>=uLength) break; // stop when we multiple a row by a column \n" +
+"			float m1 = toIEEE754(texture2D(usampler1,vec2(ss,r))); \n" +
+"			float m2 = toIEEE754(texture2D(usampler2,vec2(c,tt))); \n" +
 "// used for verifying correct sampling of texture" +
-"//			return m1; \n" + 
-"//			return float(texture2D(usampler1,vec2(ss,r)).r*255.); \n" + 
-"			sum += (m1*m2); \n" + 
-"			ss += uStepS; \n" + 
-"			tt += uStepT; \n" + 
-"		} \n" + 
-"		return sum; \n" + 
-"	} \n" + 
-"	 \n" + 
-"	void main(void) { \n" + 
-"		 \n" + 
-"		// get the implied row and column from .s and .t of passed texel \n" + 
-"		float col = floor((vTex.s*uOutRows)); \n" + 
-"		float row = floor((vTex.t*uOutCols));    \n" + 
-"\n" + 
-"		// sum row x col for the passed pixel \n" + 
-"		float v = sumrowcol(row,col); \n" + 
-"\n" + 
-"		// Render to IEEE 754 Floating Point \n" + 
-"		if (v==0.) { \n" + 
-"			gl_FragColor = vec4(0.,0.,0.,0.); \n" + 
-"			return; \n" + 
-"		} \n" + 
-"		float a = abs(v);                           // encode absolute value + sign \n" + 
-"		float exp = floor(log2(a));                 // number of powers of 2 \n" + 
-"		float mant = (a * pow(2.,23.-exp));         // multiply to fill 24 bits (implied leading 1) \n" + 
-"		float mant1 = floor(mant / 256. / 256.);    // first 8 bits of mantissa \n" + 
-"		float mant2 = mod(floor(mant / 256.),256.); // second 8 bits \n" + 
-"		float mant3 = mod(mant,256.);               // third 8 bits \n" + 
-"		 \n" + 
-"		highp float sign = 128.-128.*(a/v);			// sign bit is 256 or 0 \n" + 
-"		highp float e = (sign+exp+127.)/510.;		// exponent and sign \n" + 
-"		highp float m1 = (mant1-(128.*(1.-mod(exp+127.,2.))))/255.; // handle leading bit \n" + 
-"		highp float m2 = (mant2)/255.;				// middle part \n" + 
-"		highp float m3 = (mant3+.5)/255.;			// scale to 0 - 255 \n" + 
-"		gl_FragColor = vec4(m3,m2,m1,e);			// output an IEEE754 32-bit floating point number \n" + 
+"//			return m1; \n" +
+"//			return float(texture2D(usampler1,vec2(ss,r)).r*255.); \n" +
+"			sum += (m1*m2); \n" +
+"			ss += uStepS; \n" +
+"			tt += uStepT; \n" +
+"		} \n" +
+"		return sum; \n" +
+"	} \n" +
+"	 \n" +
+"	void main(void) { \n" +
+"		 \n" +
+"		// get the implied row and column from .s and .t of passed texel \n" +
+"		float col = floor((vTex.s*uOutRows)); \n" +
+"		float row = floor((vTex.t*uOutCols));    \n" +
+"\n" +
+"		// sum row x col for the passed pixel \n" +
+"		float v = sumrowcol(row,col); \n" +
+"\n" +
+"		// Render to IEEE 754 Floating Point \n" +
+"		if (v==0.) { \n" +
+"			gl_FragColor = vec4(0.,0.,0.,0.); \n" +
+"			return; \n" +
+"		} \n" +
+"		float a = abs(v);                           // encode absolute value + sign \n" +
+"		float exp = floor(log2(a));                 // number of powers of 2 \n" +
+"		float mant = (a * pow(2.,23.-exp));         // multiply to fill 24 bits (implied leading 1) \n" +
+"		float mant1 = floor(mant / 256. / 256.);    // first 8 bits of mantissa \n" +
+"		float mant2 = mod(floor(mant / 256.),256.); // second 8 bits \n" +
+"		float mant3 = mod(mant,256.);               // third 8 bits \n" +
+"		 \n" +
+"		highp float sign = 128.-128.*(a/v);			// sign bit is 256 or 0 \n" +
+"		highp float e = (sign+exp+127.)/510.;		// exponent and sign \n" +
+"		highp float m1 = (mant1-(128.*(1.-mod(exp+127.,2.))))/255.; // handle leading bit \n" +
+"		highp float m2 = (mant2)/255.;				// middle part \n" +
+"		highp float m3 = (mant3+.5)/255.;			// scale to 0 - 255 \n" +
+"		gl_FragColor = vec4(m3,m2,m1,e);			// output an IEEE754 32-bit floating point number \n" +
 "	} "
 
 };
@@ -581,7 +581,3 @@ gpu_matrix.create = function(r,c,data) {
 	var M = new gpu_matrix();
 	return M.setData(r,c,data);
 };
-
-
-
-
