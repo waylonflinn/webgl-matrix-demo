@@ -122,8 +122,9 @@ gpu_matrix.prototype = {
 		var r = Math.max(r1,r2);
 		var c = Math.max(c1,c2);
 		var texelcount = r*c;
+		var BYTES_PER_TEXEL = 3;
 		// get texel data (rgb) as a Float32Array
-		texels = new Float32Array(3*texelcount);
+		texels = new Float32Array(texelcount*BYTES_PER_TEXEL);
 		var d1 = m1.data;
 		var d2 = m2.data;
 		// special case if same dimensions
