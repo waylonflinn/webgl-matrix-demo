@@ -121,33 +121,47 @@ gpu_matrix.prototype = {
 		var r1 = m1.r, c1=m1.c, r2=m2.r, c2=m2.c;
 		var r = Math.max(r1,r2);
 		var c = Math.max(c1,c2);
+		// console.log("r: {0} c: {1}".format(r, c));
+		// console.log("r1: {0} c1: {1}".format(r1, c1));
+		// console.log("r2: {0} c2: {1}".format(r2, c2));
 		var texelcount = r*c;
+		console.log("texels: {0}".format(texelcount));
 		var BYTES_PER_TEXEL = 3;
 		// get texel data (rgb) as a Float32Array
 		texels = new Float32Array(texelcount*BYTES_PER_TEXEL);
 		var d1 = m1.data;
 		var d2 = m2.data;
+		var dst = 0, src1=0, src2=0, texel = 0;
 		// special case if same dimensions
 		if (r1===r2 && c1===c2) {
 			// copy m1 to .r and m2 to .g
-			var dst = 0, src1=0, src2=0;
 			do {
-				texels[dst++] = d1[src1++];
-				texels[dst++] = d2[src2++];
-				dst++;
+				texels[dst++] = d1[src1++]; // red
+				texels[dst++] = d2[src2++]; // green
+				dst++;						// blue
 			} while(--texelcount);
 		} else {
-			// copy long and short dimensions
+
 			var row=0, col=0;
-			var src1 = 0;
 			do {
-				texels[(row*c1+col)*3] = d1[src1++];
-				texels[(col*r2+row)*3+1] = d2[col*r2+row];
-				if (col>=c1) {
-					col = 0;
-					row++;
-				}
+				texel = dst / 3 | 0;
+				col = texel % c;
+				row = texel / c | 0;
+				if(col < c1 && row < r1)
+					texels[dst] = d1[src1++];
+
+				dst++;						// red -> green
+
+				if(col < c2 && row < r2)
+					texels[dst] = d2[src2++];
+
+				dst += 2;						// green -> red (skip blue)
+
 			} while(--texelcount);
+			console.log("dst: {0}".format(dst));
+			console.log("src1: {0}".format(src1));
+			console.log("src2: {0}".format(src2));
+
 		}
 		return texels;
 	},
