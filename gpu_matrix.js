@@ -125,7 +125,7 @@ gpu_matrix.prototype = {
 		var texels = new Float32Array(texelcount*BYTES_PER_TEXEL);
 		var d1 = m1.data;
 		var d2 = m2.data;
-		var dst = 0, src1=0, src2=0, texel = 0;
+		var dst = 0, src1=0, src2=0;
 		// special case if same dimensions
 		if (r1===r2 && c1===c2) {
 			// copy m1 to .r and m2 to .g
@@ -136,9 +136,9 @@ gpu_matrix.prototype = {
 			} while(--texelcount);
 		} else {
 
-			var row=0, col=0;
+			var row=0, col=0, texel = 0;
 			do {
-				texel = dst / 3 | 0;
+				texel = dst / BYTES_PER_TEXEL | 0;
 				col = texel % c;
 				row = texel / c | 0;
 				if(col < c1 && row < r1)
@@ -152,6 +152,7 @@ gpu_matrix.prototype = {
 				dst += 2;						// green -> red (skip blue)
 
 			} while(--texelcount);
+			console.log("texel: {0}".format(texel));
 
 		}
 		return texels;
@@ -437,10 +438,10 @@ gpu_matrix.prototype = {
 	// sum row r x col c                                                     \n\
 	float sumrowcol(float row, float col) {                                  \n\
 		float sum = 0.;             // sum                                   \n\
-		float ss = 0.;              // column on source texture              \n\
-		float tt = 0.;              // row on source texture                 \n\
-		float r = row*uStepT;       // moving texture coordinate             \n\
-		float c = col*uStepS;       // moving texture coordinate             \n\
+		float ss = 0.5 * uStepS;              // column on source texture    \n\
+		float tt = 0.5 * uStepT;              // row on source texture       \n\
+		float r = (row + 0.5)*uStepT;       // moving texture coordinate     \n\
+		float c = (col + 0.5)*uStepS;       // moving texture coordinate     \n\
 		for (int pos=0 ; pos<2048 ; ++pos) {                                 \n\
 			if(pos>=uLength) break; // stop when we multiple a row by a column \n\
 			float m1 = texture2D(usampler,vec2(ss,r)).r;                     \n\
