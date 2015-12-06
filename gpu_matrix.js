@@ -95,7 +95,6 @@ gpu_matrix.prototype = {
 		canvas.height = r;
 		canvas.width = c;
 		if (this.__gpumatrix__===undefined) {
-			console.log("getting webgl");
 			// get webgl context
 			gpu_matrix.prototype.__gpumatrix__ = canvas.getContext("experimental-webgl",
 												 { premultipliedAlpha: false, preserveDrawingBuffer: false } );
@@ -111,24 +110,19 @@ gpu_matrix.prototype = {
 			}
 		}
 		// set viewport to rows, columns
-		console.log("this.__gpumatrix__ " + this.__gpumatrix__);
 		gpu_matrix.prototype.__gpumatrix__.viewport(0, 0, c, r); //
 		return this.__gpumatrix__;
 	},
 
 	_texelsFromMatrices: function(m1,m2,r,c) {
 		// dimensions
+		var BYTES_PER_TEXEL = 3; // RGB, one byte per channel
 		var r1 = m1.r, c1=m1.c, r2=m2.r, c2=m2.c;
 		var r = Math.max(r1,r2);
 		var c = Math.max(c1,c2);
-		// console.log("r: {0} c: {1}".format(r, c));
-		// console.log("r1: {0} c1: {1}".format(r1, c1));
-		// console.log("r2: {0} c2: {1}".format(r2, c2));
 		var texelcount = r*c;
-		console.log("texels: {0}".format(texelcount));
-		var BYTES_PER_TEXEL = 3;
 		// get texel data (rgb) as a Float32Array
-		texels = new Float32Array(texelcount*BYTES_PER_TEXEL);
+		var texels = new Float32Array(texelcount*BYTES_PER_TEXEL);
 		var d1 = m1.data;
 		var d2 = m2.data;
 		var dst = 0, src1=0, src2=0, texel = 0;
@@ -158,9 +152,6 @@ gpu_matrix.prototype = {
 				dst += 2;						// green -> red (skip blue)
 
 			} while(--texelcount);
-			console.log("dst: {0}".format(dst));
-			console.log("src1: {0}".format(src1));
-			console.log("src2: {0}".format(src2));
 
 		}
 		return texels;
@@ -387,7 +378,7 @@ gpu_matrix.prototype = {
 
 	// get shader from script tag
 	_getShader: function( gl, shadertype, str ){
-		console.log("\n" +str+ "\n")
+		// console.log("\n" +str+ "\n")
 		// create appropriate type of shader
 		var shader;
 		if ( shadertype == "x-shader/x-fragment" )
@@ -475,6 +466,8 @@ gpu_matrix.prototype = {
 			gl_FragColor = vec4(0.,0.,0.,0.);                                \n\
 			return;                                                          \n\
 		}                                                                    \n\
+		// TODO: correctly handle denormal numbers                           \n\
+		// http://www.2ality.com/2012/04/number-encoding.html                \n\
 		float a = abs(v);                           // encode absolute value + sign \n\
 		float exp = floor(log2(a));                 // number of powers of 2 \n\
 		float mant = (a * pow(2.,23.-exp));         // multiply to fill 24 bits (implied leading 1) \n\
