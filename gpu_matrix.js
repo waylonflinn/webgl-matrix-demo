@@ -429,7 +429,7 @@ gpu_matrix.prototype = {
                                                                              \n\
 	varying vec2	  vTex;         // row, column to calculate              \n\
 	uniform sampler2D usampler;		// left in .r, right in .g               \n\
-	uniform int		  uLength;      // r1xc1.r2xc2 => product has r2 (or c1) terms \n\
+	uniform int		  uLength;      // interior (matching) dimension (r1/c2) \n\
 	uniform float	  uStepS;       // increment across source texture       \n\
 	uniform float	  uStepT;       // increment down source texture         \n\
 	uniform float	  uOutRows;     // size of output in rows                \n\
@@ -437,13 +437,13 @@ gpu_matrix.prototype = {
 	                                                                         \n\
 	// sum row r x col c                                                     \n\
 	float sumrowcol(float row, float col) {                                  \n\
-		float sum = 0.;             // sum                                   \n\
-		float ss = 0.5 * uStepS;              // column on source texture    \n\
-		float tt = 0.5 * uStepT;              // row on source texture       \n\
-		float r = (row + 0.5)*uStepT;       // moving texture coordinate     \n\
-		float c = (col + 0.5)*uStepS;       // moving texture coordinate     \n\
+		float sum = 0.;                // sum                                \n\
+		float ss = 0.5 * uStepS;       // column on source texture           \n\
+		float tt = 0.5 * uStepT;       // row on source texture              \n\
+		float r = (row + 0.5)*uStepT;  // moving texture coordinate          \n\
+		float c = (col + 0.5)*uStepS;  // moving texture coordinate          \n\
 		for (int pos=0 ; pos<2048 ; ++pos) {                                 \n\
-			if(pos>=uLength) break; // stop when we multiple a row by a column \n\
+			if(pos>=uLength) break;    // stop when we finish the row/column \n\
 			float m1 = texture2D(usampler,vec2(ss,r)).r;                     \n\
 			float m2 = texture2D(usampler,vec2(c,tt)).g;                     \n\
 			sum += (m1*m2);                                                  \n\
